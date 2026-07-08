@@ -7,27 +7,26 @@ type ConnectionObject = {
 const connection: ConnectionObject = {};
 
 async function dbConnect(): Promise<void> {
-  // Check if already connected
   if (connection.isConnected) {
-    console.log("Already connected to the database");
+    console.log("Already connected to database");
     return;
   }
 
+  const mongoUri = process.env.MONGODB_URI;
+
+  if (!mongoUri) {
+    throw new Error(
+      "MONGODB_URI is not defined. Please set it in your .env.local file."
+    );
+  }
+
   try {
-    const mongoUri = process.env.MONGODB_URI;
-
-    if (!mongoUri) {
-      throw new Error("MONGODB_URI is not defined");
-    }
-
     const db = await mongoose.connect(mongoUri);
-
     connection.isConnected = db.connections[0].readyState;
-
-    console.log("Database connected successfully");
+    console.log("DB connected successfully");
   } catch (error) {
     console.error("Database connection failed:", error);
-    process.exit(1);
+    throw new Error("Failed to connect to database");
   }
 }
 

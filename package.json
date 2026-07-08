@@ -10,20 +10,12 @@
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
-<<<<<<< HEAD
     "mongoose": "^9.7.4",
     "next": "16.2.10",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-email": "^6.6.8",
     "resend": "^6.17.1",
-=======
-    "mongoose": "^9.7.3",
-    "next": "16.2.10",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "react-email": "^6.6.6",
->>>>>>> 3ee174c10db2b80e328b9923e3eccbb3df9d594d
     "zod": "^4.4.3"
   },
   "devDependencies": {
