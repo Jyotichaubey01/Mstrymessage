@@ -4,105 +4,84 @@ import dbConnect from "@/lib/dbConnect";
 import UserModel from "@/model/User";
 
 
-export async function GET(request: Request) {
+export async function GET(){
 
-  try {
+ try{
 
-    await dbConnect();
-
-
-    const session = await getServerSession(authOptions);
+  await dbConnect();
 
 
-    console.log("SESSION:", session);
-
-
-    if (!session?.user) {
-
-      return Response.json(
-        {
-          success: false,
-          message: "Not Authenticated",
-        },
-        {
-          status: 401,
-        }
-      );
-
-    }
-
-
-    const userId = session.user._id;
-
-
-    if (!userId) {
-
-      return Response.json(
-        {
-          success: false,
-          message: "User ID missing from session",
-        },
-        {
-          status: 400,
-        }
-      );
-
-    }
+  const session =
+    await getServerSession(authOptions);
 
 
 
-    const user = await UserModel.findById(userId)
-      .select("messages");
-
-
-
-    if (!user) {
-
-      return Response.json(
-        {
-          success: false,
-          message: "User not found",
-        },
-        {
-          status: 404,
-        }
-      );
-
-    }
-
-
+  if(!session?.user?._id){
 
     return Response.json(
       {
-        success: true,
-        messages: user.messages || [],
+       success:false,
+       message:"Not authenticated"
       },
       {
-        status: 200,
-      }
-    );
-
-
-
-  } catch (error) {
-
-
-    console.log(
-      "GET MESSAGE ERROR:",
-      error
-    );
-
-
-    return Response.json(
-      {
-        success: false,
-        message: "Internal Server Error",
-      },
-      {
-        status: 500,
+       status:401
       }
     );
 
   }
+
+
+
+  const user =
+    await UserModel.findById(
+      session.user._id
+    )
+    .select("messages");
+
+
+
+  if(!user){
+
+    return Response.json(
+      {
+       success:false,
+       message:"User not found"
+      },
+      {
+       status:404
+      }
+    );
+
+  }
+
+
+
+  return Response.json(
+    {
+      success:true,
+      messages:user.messages || []
+    },
+    {
+      status:200
+    }
+  );
+
+
+ }
+ catch(error){
+
+  console.log(error);
+
+  return Response.json(
+   {
+    success:false,
+    message:"Server error"
+   },
+   {
+    status:500
+   }
+  );
+
+ }
 
 }

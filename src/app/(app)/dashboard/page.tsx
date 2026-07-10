@@ -10,7 +10,9 @@ interface Message {
 }
 
 export default function DashboardPage() {
+
   const profileUrl = "http://localhost:3000/u/mm";
+
 
   const [acceptMessages, setAcceptMessages] = useState(true);
   const [context, setContext] = useState("");
@@ -18,127 +20,240 @@ export default function DashboardPage() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
 
-  // Fetch API Messages
+
+  // Fetch feedback messages from MongoDB API
+
   const fetchMessages = async () => {
+
     try {
+
       setLoading(true);
+      setError("");
+
 
       const response = await axios.get(
-        "/api/get-messages"
+        "/api/get-messages",
+        {
+          withCredentials: true,
+        }
       );
 
-      if (response.data.success) {
-        setMessages(response.data.messages);
-      } else {
+
+      console.log(
+        "API RESPONSE:",
+        response.data
+      );
+
+
+      if(response.data.success){
+
+        setMessages(
+          response.data.messages || []
+        );
+
+      }
+      else{
+
         setMessages([]);
+
       }
 
-    } catch (error) {
-      console.log("Error fetching messages:", error);
+
+    } catch(error:any){
+
+
+      console.log(
+        "Fetch Messages Error:",
+        error
+      );
+
+
+      if(error.response?.status === 401){
+
+        setError(
+          "Please login again to see your feedback."
+        );
+
+      }
+      else{
+
+        setError(
+          "Unable to load feedback."
+        );
+
+      }
+
+
       setMessages([]);
+
+
     } finally {
+
       setLoading(false);
+
     }
+
   };
 
 
-  // Load saved data + API data
-  useEffect(() => {
 
-    const savedToggle = localStorage.getItem(
-      "acceptMessages"
-    );
 
-    if (savedToggle !== null) {
-      setAcceptMessages(JSON.parse(savedToggle));
+
+  useEffect(()=>{
+
+
+    const savedToggle =
+      localStorage.getItem(
+        "acceptMessages"
+      );
+
+
+    if(savedToggle){
+
+      setAcceptMessages(
+        JSON.parse(savedToggle)
+      );
+
     }
+
 
 
     const savedContext =
-      localStorage.getItem("feedbackContext");
+      localStorage.getItem(
+        "feedbackContext"
+      );
 
-    if (savedContext) {
+
+    if(savedContext){
+
       setContext(savedContext);
+
     }
+
 
 
     fetchMessages();
 
-  }, []);
+
+  },[]);
 
 
 
-  // Save toggle
-  useEffect(() => {
+
+
+  useEffect(()=>{
+
+
     localStorage.setItem(
       "acceptMessages",
-      JSON.stringify(acceptMessages)
+      JSON.stringify(
+        acceptMessages
+      )
     );
 
-  }, [acceptMessages]);
+
+  },[acceptMessages]);
 
 
 
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(profileUrl);
-      alert("Profile link copied successfully.");
 
-    } catch {
-      alert("Unable to copy link.");
+
+
+  const copyLink = async()=>{
+
+    try{
+
+      await navigator.clipboard.writeText(
+        profileUrl
+      );
+
+      alert(
+        "Profile link copied successfully"
+      );
+
+
     }
+    catch{
+
+      alert(
+        "Unable to copy link"
+      );
+
+    }
+
   };
 
 
 
-  const saveContext = () => {
+
+
+  const saveContext = ()=>{
+
     localStorage.setItem(
       "feedbackContext",
       context
     );
 
-    alert("Context saved.");
+
+    alert(
+      "Context saved"
+    );
+
   };
 
 
 
-  const generateInsights = () => {
 
-    if(messages.length === 0){
+
+
+  const generateInsights = ()=>{
+
+
+    if(messages.length===0){
+
       setInsight(
         "No feedback messages available."
       );
+
       return;
+
     }
 
 
-    let output = "";
+
+    let output="";
+
 
 
     if(
-      messages.some((m)=>
-        m.content
+      messages.some((message)=>
+        message.content
         .toLowerCase()
         .includes("great")
       )
     ){
+
       output +=
       "✅ Users are giving positive feedback.\n";
+
     }
 
 
 
     if(
-      messages.some((m)=>
-        m.content
+      messages.some((message)=>
+        message.content
         .toLowerCase()
         .includes("improve")
       )
     ){
+
       output +=
       "💡 Users suggest improvements.\n";
+
     }
 
 
@@ -149,7 +264,9 @@ export default function DashboardPage() {
 
     setInsight(output);
 
+
   };
+
 
 
 
@@ -165,16 +282,19 @@ export default function DashboardPage() {
 
 
 
+
+
       {/* Profile Link */}
 
-      <div className="space-y-2">
+      <div>
 
         <label className="font-semibold">
           Copy Your Unique Link
         </label>
 
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 mt-2">
+
 
           <input
             value={profileUrl}
@@ -193,30 +313,44 @@ export default function DashboardPage() {
 
         </div>
 
+
       </div>
 
 
 
 
 
-      {/* Toggle */}
+
+
+      {/* Accept Messages */}
+
 
       <div className="flex items-center gap-3 mt-6">
+
 
         <input
           type="checkbox"
           checked={acceptMessages}
-          onChange={() =>
-            setAcceptMessages(prev=>!prev)
+          onChange={()=>
+            setAcceptMessages(
+              prev=>!prev
+            )
           }
         />
 
 
         <span className="font-medium">
+
           Accept Messages :
 
           <span className="ml-2 text-blue-600">
-            {acceptMessages ? "ON":"OFF"}
+
+            {
+              acceptMessages
+              ? "ON"
+              : "OFF"
+            }
+
           </span>
 
         </span>
@@ -228,7 +362,10 @@ export default function DashboardPage() {
 
 
 
+
+
       <hr className="my-8"/>
+
 
 
 
@@ -236,33 +373,41 @@ export default function DashboardPage() {
 
       {/* Context */}
 
-      <div className="space-y-4">
 
-        <h2 className="text-2xl font-semibold">
-          AI Feedback Context
-        </h2>
-
-
-        <textarea
-          rows={5}
-          value={context}
-          onChange={(e)=>
-            setContext(e.target.value)
-          }
-          className="w-full border rounded-md p-3"
-          placeholder="Example: Review my portfolio website"
-        />
+      <h2 className="text-2xl font-semibold mb-3">
+        AI Feedback Context
+      </h2>
 
 
-        <button
-          onClick={saveContext}
-          className="bg-black text-white px-5 py-2 rounded-md"
-        >
-          Save Context
-        </button>
+      <textarea
+
+        rows={5}
+
+        value={context}
+
+        onChange={(e)=>
+          setContext(e.target.value)
+        }
+
+        className="w-full border rounded-md p-3"
+
+        placeholder="Example: Review my portfolio website"
+
+      />
 
 
-      </div>
+      <button
+
+        onClick={saveContext}
+
+        className="mt-3 bg-black text-white px-5 py-2 rounded-md"
+
+      >
+
+        Save Context
+
+      </button>
+
 
 
 
@@ -278,7 +423,8 @@ export default function DashboardPage() {
 
       {/* Insights */}
 
-      <div className="flex justify-between items-center">
+
+      <div className="flex justify-between">
 
 
         <h2 className="text-2xl font-semibold">
@@ -287,16 +433,19 @@ export default function DashboardPage() {
 
 
         <button
+
           onClick={generateInsights}
+
           className="border px-4 py-2 rounded-md"
+
         >
+
           Generate Insights
+
         </button>
 
 
       </div>
-
-
 
 
 
@@ -323,22 +472,46 @@ export default function DashboardPage() {
 
 
 
-      {/* Refresh */}
 
-      <button
-        onClick={fetchMessages}
-        className="border rounded-md px-5 py-2"
-      >
-        🔄 Refresh Messages
-      </button>
+      <div className="flex justify-between items-center">
 
 
+        <h2 className="text-2xl font-semibold">
+          Received Feedback
+        </h2>
+
+
+        <button
+
+          onClick={fetchMessages}
+
+          className="border px-5 py-2 rounded-md"
+
+        >
+
+          🔄 Refresh
+
+        </button>
+
+
+      </div>
 
 
 
 
 
-      {/* Messages */}
+      {
+        error &&
+
+        <p className="text-red-500 mt-4">
+          {error}
+        </p>
+
+      }
+
+
+
+
 
 
       <div className="grid gap-4 mt-6">
@@ -347,29 +520,44 @@ export default function DashboardPage() {
         {
           loading ?
 
-          <p>
-            Loading messages...
-          </p>
+          (
+
+            <p>
+              Loading messages...
+            </p>
+
+          )
 
 
-          : messages.length === 0 ?
+          :
 
-          <p>
-            No feedback received yet.
-          </p>
+          messages.length===0 ?
+
+          (
+
+            <p>
+              No feedback received yet.
+            </p>
+
+          )
 
 
           :
 
           messages.map((message)=>(
 
+
             <div
+
               key={message._id}
+
               className="border rounded-lg p-5 shadow-sm"
+
             >
 
+
               <h3 className="font-bold text-lg">
-                Anonymous
+                Anonymous Feedback
               </h3>
 
 
@@ -378,7 +566,25 @@ export default function DashboardPage() {
               </p>
 
 
+
+              {
+                message.createdAt &&
+
+                <p className="text-sm text-gray-400 mt-3">
+
+                  {
+                    new Date(
+                      message.createdAt
+                    ).toLocaleString()
+                  }
+
+                </p>
+
+              }
+
+
             </div>
+
 
           ))
 
@@ -388,8 +594,8 @@ export default function DashboardPage() {
       </div>
 
 
-
     </div>
 
   );
+
 }

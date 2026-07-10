@@ -1,56 +1,142 @@
-// src/app/api/send-message/route.ts
 import dbConnect from "@/lib/dbConnect";
 import UserModel from "@/model/User";
-import { Message } from "@/model/User";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(request: Request) {
+
+export async function POST(request: NextRequest) {
+
   await dbConnect();
 
-  const { username, content } = await request.json();
 
   try {
-    const user = await UserModel.findOne({ username });
 
-    if (!user) {
-      return Response.json(
+    const { username, content } =
+      await request.json();
+
+
+    console.log(
+      "REQUEST DATA:",
+      {
+        username,
+        content
+      }
+    );
+
+
+    if(!username || !content){
+
+      return NextResponse.json(
         {
-          success: false,
-          message: "User not found",
+          success:false,
+          message:"Missing fields"
         },
-        { status: 404 }
+        {
+          status:400
+        }
       );
+
     }
 
-    if (!user.isAcceptingMessage) {
-      return Response.json(
+
+
+    const user =
+      await UserModel.findOne({
+        username
+      });
+
+
+
+    console.log(
+      "FOUND USER:",
+      user
+    );
+
+
+
+    if(!user){
+
+      return NextResponse.json(
         {
-          success: false,
-          message: "User is not accepting messages",
+          success:false,
+          message:"User not found"
         },
-        { status: 403 }
+        {
+          status:404
+        }
       );
+
     }
 
-    const newMessage = { content, createdAt: new Date() };
 
-    user.messages.push(newMessage as Message);
+
+    if(!user.isAcceptingMessages){
+
+      return NextResponse.json(
+        {
+          success:false,
+          message:"User is not accepting messages"
+        },
+        {
+          status:403
+        }
+      );
+
+    }
+
+
+
+
+    user.messages.push({
+
+      content: content,
+
+      createdAt: new Date()
+
+    });
+
+
+
     await user.save();
 
-    return Response.json(
-      {
-        success: true,
-        message: "Message sent successfully",
-      },
-      { status: 200 }
+
+
+    console.log(
+      "UPDATED USER:",
+      user.messages
     );
-  } catch (error) {
-    console.log("An unexpected error occurred while sending message: ", error);
-    return Response.json(
+
+
+
+    return NextResponse.json(
       {
-        success: false,
-        message: "Internal server error",
+        success:true,
+        message:"Feedback Saved Successfully"
       },
-      { status: 500 }
+      {
+        status:200
+      }
     );
+
+
   }
+  catch(error){
+
+    console.log(
+      "SEND MESSAGE ERROR:",
+      error
+    );
+
+
+    return NextResponse.json(
+      {
+        success:false,
+        message:"Internal server error"
+      },
+      {
+        status:500
+      }
+    );
+
+  }
+
 }
