@@ -5,101 +5,137 @@ import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/dbConnect";
 import UserModel from "@/model/User";
 
-export const authOptions: NextAuthOptions = {
-  providers: [
-    CredentialsProvider({
-      id: "credentials",
-      name: "Credentials",
 
-      credentials: {
-        identifier: {
-          label: "Email or Username",
-          type: "text",
+export const authOptions: NextAuthOptions = {
+
+  providers: [
+
+    CredentialsProvider({
+
+      id:"credentials",
+
+      name:"Credentials",
+
+      credentials:{
+        identifier:{
+          label:"Email or Username",
+          type:"text",
         },
-        password: {
-          label: "Password",
-          type: "password",
-        },
+        password:{
+          label:"Password",
+          type:"password",
+        }
       },
 
-      async authorize(credentials) {
+
+      async authorize(credentials){
+
         await dbConnect();
 
-        try {
-          if (!credentials?.identifier || !credentials?.password) {
-            throw new Error("Please enter email/username and password");
-          }
+        if(
+          !credentials?.identifier ||
+          !credentials?.password
+        ){
+          throw new Error(
+            "Missing credentials"
+          );
+        }
 
-          const user = await UserModel.findOne({
-            $or: [
-              { email: credentials.identifier },
-              { username: credentials.identifier },
-            ],
-          });
 
-          if (!user) {
-            throw new Error("No user found");
-          }
+        const user = await UserModel.findOne({
+          $or:[
+            {
+              email:credentials.identifier
+            },
+            {
+              username:credentials.identifier
+            }
+          ]
+        });
 
-          if (!user.isVerified) {
-            throw new Error("Please verify your account before login");
-          }
 
-          const isPasswordCorrect = await bcrypt.compare(
+        if(!user){
+          throw new Error(
+            "User not found"
+          );
+        }
+
+
+        const isPasswordCorrect =
+          await bcrypt.compare(
             credentials.password,
             user.password
           );
 
-          if (!isPasswordCorrect) {
-            throw new Error("Incorrect password");
-          }
 
-          return {
-            _id: user._id?.toString(),
-            username: user.username,
-            email: user.email,
-            isVerified: user.isVerified,
-            isAcceptingMessages: user.isAcceptingMessages,
-          };
-        } catch (err: any) {
-          throw new Error(err.message || "Authentication failed");
+        if(!isPasswordCorrect){
+          throw new Error(
+            "Invalid password"
+          );
         }
-      },
-    }),
+
+
+        return {
+          _id:user._id.toString(),
+          username:user.username,
+          email:user.email,
+        };
+
+      }
+
+    })
+
   ],
 
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token._id = user._id?.toString();
-        token.username = user.username;
-        token.isVerified = user.isVerified;
-        token.isAcceptingMessages = user.isAcceptingMessages;
+
+
+  callbacks:{
+
+    async jwt({token,user}){
+
+      if(user){
+        token._id=user._id;
+        token.username=user.username;
+        token.email=user.email;
       }
 
       return token;
     },
 
-    async session({ session, token }) {
-      if (session.user) {
-        session.user._id = token._id as string;
-        session.user.username = token.username as string;
-        session.user.isVerified = token.isVerified as boolean;
-        session.user.isAcceptingMessages =
-          token.isAcceptingMessages as boolean;
+
+    async session({session,token}){
+
+      if(session.user){
+
+        session.user._id =
+          token._id as string;
+
+        session.user.username =
+          token.username as string;
+
+        session.user.email =
+          token.email as string;
+
       }
 
+
       return session;
-    },
+
+    }
+
   },
 
-  pages: {
-    signIn: "/sign-in",
+
+  session:{
+    strategy:"jwt"
   },
 
-  session: {
-    strategy: "jwt",
+
+  pages:{
+    signIn:"/sign-in"
   },
 
-  secret: process.env.NEXTAUTH_SECRET,
+
+  secret:process.env.NEXTAUTH_SECRET
+
 };

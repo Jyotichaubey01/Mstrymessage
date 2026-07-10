@@ -1,110 +1,103 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/options";
+import { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
+
 import dbConnect from "@/lib/dbConnect";
 import UserModel from "@/model/User";
-import { User } from "next-auth";
 
-export async function POST(request: Request) {
-    await dbConnect()
+export const authOptions: NextAuthOptions = {
+  providers: [
+    CredentialsProvider({
+      id: "credentials",
+      name: "Credentials",
 
-    const session = await getServerSession(authOptions)
-    const user: User = session?.user as User
-    if (!session || !session.user) {
-        return Response.json(
-            {
-                success: false,
-                message: "Not Authenticated"
-            },
-            { status: 401 }
-        )
-    }
-    const userId = user._id;
-    const { acceptMessages } = await request.json()
+      credentials: {
+        identifier: {
+          label: "Email or Username",
+          type: "text",
+        },
+        password: {
+          label: "Password",
+          type: "password",
+        },
+      },
 
-    try {
-        const updateUser = await UserModel.findByIdAndUpdate(
-            userId,
-            { isAcceptingMessage: acceptMessages },
-            { new: true }
-        )
+      async authorize(credentials) {
+        await dbConnect();
 
-        if (!updateUser) {
-            return Response.json(
-                {
-                    success: false,
-                    message: "failed to update user status to accept messages"
-                },
-                { status: 401 }
-            )
+        if (!credentials?.identifier || !credentials?.password) {
+          throw new Error("Please enter email/username and password");
         }
 
-   return Response.json(
-    {
-        success: true,
-        message: "Message acceptance status update successfully",
-        updateUser
+        const user = await UserModel.findOne({
+          $or: [
+            { email: credentials.identifier },
+            { username: credentials.identifier },
+          ],
+        });
+
+        if (!user) {
+          throw new Error("No user found");
+        }
+
+        if (!user.isVerified) {
+          throw new Error("Please verify your account before login");
+        }
+
+        const isPasswordCorrect = await bcrypt.compare(
+          credentials.password,
+          user.password
+        );
+
+        if (!isPasswordCorrect) {
+          throw new Error("Incorrect password");
+        }
+
+        return {
+          _id: user._id.toString(),
+          username: user.username,
+          email: user.email,
+          isVerified: user.isVerified,
+          isAcceptingMessages: user.isAcceptingMessages,
+        };
+      },
+    }),
+  ],
+
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token._id = user._id;
+        token.username = user.username;
+        token.email = user.email;
+        token.isVerified = user.isVerified;
+        token.isAcceptingMessages = user.isAcceptingMessages;
+      }
+
+      return token;
     },
-    { status: 200 }
-)
 
-    } catch (error) {
-        console.log("failed to update user status to accept messages");
-        return Response.json(
-            {
-                success: false,
-                message: "failed to update user status to accept messages"
-            },
-            { status: 500 }
-        )
-    }
-}
+    async session({ session, token }) {
+      if (session.user) {
+        session.user._id = token._id as string;
+        session.user.username = token.username as string;
+        session.user.email = token.email as string;
+        session.user.isVerified = token.isVerified as boolean;
+        session.user.isAcceptingMessages =
+          token.isAcceptingMessages as boolean;
+      }
 
+      return session;
+    },
+  },
 
-export async function GET(request: Request) {
-    await dbConnect()
+  pages: {
+    signIn: "/sign-in",
+  },
 
-    const session = await getServerSession(authOptions)
-    const user: User = session?.user as User
-    if (!session || !session.user) {
-        return Response.json(
-            {
-                success: false,
-                message: "Not Authenticated"
-            },
-            { status: 401 }
-        )
-    }
-    const userId = user._id;
+  session: {
+    strategy: "jwt",
+  },
 
-    try {
-        const foundUser = await UserModel.findById(userId)
-
-        if (!foundUser) {
-            return Response.json(
-                {
-                    success: false,
-                    message: "User not found"
-                },
-                { status: 404 }
-            )
-        }
-
-        return Response.json(
-            {
-                success: true,
-                isAcceptingMessages: foundUser.isAcceptingMessage
-            },
-            { status: 200 }
-        )
-
-    } catch (error) {
-        console.log("failed to get message acceptance status");
-        return Response.json(
-            {
-                success: false,
-                message: "error in getting message acceptance status"
-            },
-            { status: 500 }
-        )
-    }
-}
+  secret: process.env.NEXTAUTH_SECRET,
+};
