@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+import { signIn } from "next-auth/react";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -32,15 +32,23 @@ export default function SignInPage() {
     setError("");
 
     try {
-      await axios.post("/api/sign-in", formData);
+      const result = await signIn("credentials", {
+        redirect: false,
+        identifier: formData.identifier,
+        password: formData.password,
+      });
 
-      alert("Login Successful!");
+      if (result?.error) {
+        setError("Invalid email/username or password.");
+        setLoading(false);
+        return;
+      }
 
-      router.push("/");
-    } catch (err: any) {
-      setError(
-        err.response?.data?.message || "Invalid email/username or password."
-      );
+      if (result?.ok) {
+        router.push("/dashboard");
+      }
+    } catch (err) {
+      setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -49,9 +57,7 @@ export default function SignInPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100 px-5">
       <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-lg">
-        <h1 className="mb-2 text-center text-4xl font-bold">
-          Welcome Back
-        </h1>
+        <h1 className="mb-2 text-center text-4xl font-bold">Welcome Back</h1>
 
         <p className="mb-8 text-center text-gray-600">
           Sign in to your Mystery Message account
@@ -59,10 +65,7 @@ export default function SignInPage() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="mb-2 block font-medium">
-              Email or Username
-            </label>
-
+            <label className="mb-2 block font-medium">Email or Username</label>
             <input
               type="text"
               name="identifier"
@@ -75,10 +78,7 @@ export default function SignInPage() {
           </div>
 
           <div>
-            <label className="mb-2 block font-medium">
-              Password
-            </label>
-
+            <label className="mb-2 block font-medium">Password</label>
             <input
               type="password"
               name="password"
@@ -90,11 +90,7 @@ export default function SignInPage() {
             />
           </div>
 
-          {error && (
-            <p className="text-center text-red-500">
-              {error}
-            </p>
-          )}
+          {error && <p className="text-center text-red-500">{error}</p>}
 
           <button
             type="submit"
@@ -106,11 +102,8 @@ export default function SignInPage() {
         </form>
 
         <p className="mt-6 text-center">
-          Don't have an account?{" "}
-          <Link
-            href="/sign-up"
-            className="font-semibold text-blue-600 hover:underline"
-          >
+          Don&apos;t have an account?{" "}
+          <Link href="/sign-up" className="font-semibold text-blue-600 hover:underline">
             Sign Up
           </Link>
         </p>
