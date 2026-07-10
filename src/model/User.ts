@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
 
 export interface Message extends Document {
   content: string;
@@ -24,7 +24,7 @@ export interface User extends Document {
   verifyCode: string;
   verifyCodeExpiry: Date;
   isVerified: boolean;
-  isAcceptingMessages: boolean;
+  isAcceptingMessage: boolean;
   messages: Message[];
 }
 
@@ -39,7 +39,7 @@ const UserSchema: Schema<User> = new Schema({
     type: String,
     required: [true, "Email is required"],
     unique: true,
-    match: [/.+\@.+\..+/, "Please use a valid email address"],
+    match: [/.+\@.+\..+/, "Please enter a valid email address"],
   },
   password: {
     type: String,
@@ -57,7 +57,7 @@ const UserSchema: Schema<User> = new Schema({
     type: Boolean,
     default: false,
   },
-  isAcceptingMessages: {
+  isAcceptingMessage: {
     type: Boolean,
     default: true,
   },
@@ -65,7 +65,7 @@ const UserSchema: Schema<User> = new Schema({
 });
 
 const UserModel =
-  (mongoose.models.User as Model<User>) ||
+  (mongoose.models.User as mongoose.Model<User>) ||
   mongoose.model<User>("User", UserSchema);
 
 export default UserModel;
